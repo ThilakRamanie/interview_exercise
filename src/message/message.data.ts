@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model } from 'mongoose';
+import { FilterQuery, Model, Types } from 'mongoose';
 import {
   ChatMessageDocument,
   chatMessageToObject,
@@ -37,11 +37,12 @@ export class MessageData {
   }
 
   async getMessage(messageId: string): Promise<ChatMessageModel> {
-    const message = await this.chatMessageModel.findById(messageId);
+    const message = await this.chatMessageModel.findById(
+      new Types.ObjectId(messageId),
+    );
     if (!message) throw new Error('Message not found');
     return chatMessageToObject(message);
   }
-
 
   async getChatConversationMessages(
     data: GetMessageDto,
@@ -89,7 +90,13 @@ export class MessageData {
 
   async delete(messageId: ObjectID): Promise<ChatMessage> {
     // TODO allow a message to be marked as deleted
-    return new ChatMessage() // Minimum to pass ts checks -replace this
+    const message = await this.chatMessageModel.findById(messageId);
+    if (!message) {
+      throw new Error('Message not found');
+    }
+    message.deleted = true;
+    const updatedMessages = await message.save();
+    return chatMessageToObject(updatedMessages);
   }
 
   async resolve(messageId: ObjectID): Promise<ChatMessage> {
